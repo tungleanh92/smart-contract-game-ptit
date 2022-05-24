@@ -96,7 +96,6 @@ contract PtitToken {
         emit Transfer(address(0), usr, amt);
     }
 
-    // hàm này không yêu cầu auth?
     function burn(address usr, uint256 amt) external {
         require(balanceOf[usr] >= amt, "ptit/insufficient-balance");
         if (

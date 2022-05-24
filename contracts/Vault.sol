@@ -67,13 +67,9 @@ contract Vault is Ownable {
         return playerBalance[msg.sender];
     }
 
-    function setBalance(address usr) public {
-        playerBalance[usr] += 1000;
-    }
-
     function faucetClaim(address usr) external {
         require(
-            mintTime[msg.sender] <= mintMax,
+            mintTime[msg.sender] < mintMax,
             "Exceed Amount Of Minting Time"
         );
         mintTime[msg.sender] += 1;
@@ -86,7 +82,6 @@ contract Vault is Ownable {
         external
         auth
     {
-        // ?? Vi cua Game lam gi duoc stake ma kiem tra 
         require(
             playerBalance[_user] >= _amt,
             "Dont have enough balance to withdraw"

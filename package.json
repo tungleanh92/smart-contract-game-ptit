@@ -19,6 +19,7 @@
     },
     "dependencies": {
         "@openzeppelin/contracts": "^4.6.0",
+        "node-libcurl": "^2.3.4",
         "web3": "^1.7.3"
     }
 }

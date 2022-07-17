@@ -81,6 +81,7 @@ contract Vault is Ownable {
     function joinGame(address _user, uint256 _amt)
         external
         auth
+        returns (bool)
     {
         require(
             playerBalance[_user] >= _amt,
@@ -88,6 +89,7 @@ contract Vault is Ownable {
         );
         playerBalance[_user] -= _amt;
         emit joingame(_user, _amt);
+        return true;
     }
 
     function claimToken(address _user, uint256 _amt) external auth {

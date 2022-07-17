@@ -11,14 +11,15 @@ describe("Run and test all function", function () {
   const vaultContract = await vaultFactory.deploy(ptitTokenContract.address);
   await vaultContract.deployed();
 
-  const gameFactory = await hre.ethers.getContractFactory("NonCompetitiveGameA");
+  const gameFactory = await hre.ethers.getContractFactory("TwoPlayersV1");
   const gameContract = await gameFactory.deploy(vaultContract.address);
   await gameContract.deployed();
 
-  const ownAddress = '0x72264E2431bfF059513899d4fF98f880a958CFa9'
-  const expectedAmount = "1200000.0"
-  const parsedAmount = ethers.utils.parseEther("1200000");
-  const parsedAmountDepositToken = ethers.utils.parseEther("10");
+  const ownAddress = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266'
+  const expectedAmount = "100.0"
+  const expectResult = "99.0"
+  const parsedAmount = ethers.utils.parseEther("100");
+  const parsedAmountDepositToken = ethers.utils.parseEther("30");
   const gameId = '1'
 
   // for deposit/withdraw
@@ -45,6 +46,7 @@ describe("Run and test all function", function () {
 
   // for faucet claim
   await vaultContract.setMintAmount(parsedAmount)
+  await vaultContract.setMintTime('1')
 
   let mintAmt = await vaultContract.mintAmt()
   expect(ethers.utils.formatEther(mintAmt)).to.equal(expectedAmount)
@@ -71,10 +73,17 @@ describe("Run and test all function", function () {
   verification = await gameContract.verification()
   expect(verification).to.equal(ownAddress)
 
-  // // join game
-  // let joinGameTx = await gameContract.joinGame(parsedAmountDepositToken, gameId)
-  // await joinGameTx.wait()
-  
+  // join game
+  let messageHash = ethers.utils.id('randomString');
+  let messageHashBytes = ethers.utils.arrayify(messageHash)
+  let signWallet = new ethers.Wallet("0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80");
+  let flatSig = await signWallet.signMessage(messageHashBytes);
+
+  let joinGameTx = await gameContract.joinGame('1', parsedAmountDepositToken, flatSig, messageHash)
+  await joinGameTx.wait()
+  let playerBalance1 = await vaultContract.playerBalance(ownAddress)
+  expect(ethers.utils.formatEther(playerBalance1)).to.equal(expectResult)
+
   // // winner claim
   // let messageHash = ethers.utils.id("You win!");
   // let messageHashBytes = ethers.utils.arrayify(messageHash)

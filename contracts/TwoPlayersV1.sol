@@ -16,7 +16,8 @@ contract TwoPlayersV1 is Ownable {
     struct GamePlay {
         uint256 amount;
         address[] players;
-        bool claimed;
+        bool winClaimed;
+        mapping(address => bool) tieClaimed;
     }
 
     Vault_Interface public Vault;
@@ -69,13 +70,17 @@ contract TwoPlayersV1 is Ownable {
         emit joingame(_id, _amt, msg.sender, block.timestamp);
     }
 
-    function viewPlayer(uint256 _id) public returns (address[] memory players) {
+    function viewPlayer(uint256 _id)
+        public
+        view
+        returns (address[] memory players)
+    {
         players = gamePlayID[_id].players;
         return players;
     }
 
     // _id is from server, which is stored in DB after player click joinGame
-    // _signature and _messageHash are from to loser, which are stored in DB after player click joinGame
+    // _signature and _messageHash are from loser, which are stored in DB after player click joinGame
     // _winner is from server; _winner is byte type, hence must be converted to address type in Smart Contract
     function winnerClaim(
         uint256 _id,
@@ -86,12 +91,12 @@ contract TwoPlayersV1 is Ownable {
         (bytes32 r, bytes32 s, uint8 v) = splitSignature(_signature);
         bytes32 _ethSignedMessageHash = getEthSignedMessageHash(_messageHash);
         address recoverAddress = ecrecover(_ethSignedMessageHash, v, r, s);
-        GamePlay memory gp = gamePlayID[_id];
-        require(gp.claimed != true, "Already Claim Reward");
-        gamePlayID[_id].claimed = true;
+        GamePlay storage gp = gamePlayID[_id];
+        require(gp.winClaimed != true, "Already Claim Reward");
+        gp.winClaimed = true;
         address winner = bytesToAddress(_winner);
-        for (uint24 i = 0; i < gp.players.length; i++) {
-            if (recoverAddress == gp.players[i] && recoverAddress != winner) {
+        for (uint8 i = 0; i < 2; i++) {
+            if (recoverAddress != winner) {
                 Vault.claimToken(winner, 2 * gp.amount); // 2 * gp.amount: take back from original deposit + from loser
                 break;
             }
@@ -101,23 +106,14 @@ contract TwoPlayersV1 is Ownable {
 
     // game tie
     // _id is from server, which is stored in DB after player clicks joinGame
-    // _signature and _messageHash are from to players (msg.sender), which are stored in DB after player clicks joinGame
-    function playerClaimBack(
-        uint256 _id,
-        bytes memory _signature,
-        bytes32 _messageHash
-    ) public {
-        (bytes32 r, bytes32 s, uint8 v) = splitSignature(_signature);
-        bytes32 _ethSignedMessageHash = getEthSignedMessageHash(_messageHash);
-        address recoverAddress = ecrecover(_ethSignedMessageHash, v, r, s);
-        GamePlay memory gp = gamePlayID[_id];
-        require(gp.claimed != true, "Already Claim Reward");
-        gamePlayID[_id].claimed = true;
-        require(recoverAddress == verification, "Not Allow");
+    function playerClaimBack(uint256 _id) public {
+        GamePlay storage gp = gamePlayID[_id];
+        require(gp.tieClaimed[msg.sender] != true, "Already Claim Reward");
         require(
             gp.players[0] == msg.sender || gp.players[1] == msg.sender,
             "Not Allow"
         );
+        gp.tieClaimed[msg.sender] = true;
         Vault.claimToken(msg.sender, gp.amount);
         emit playerclaimback(msg.sender, gp.amount);
     }

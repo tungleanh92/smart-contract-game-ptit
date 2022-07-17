@@ -1,8 +1,9 @@
 const hre = require("hardhat");
 const ethers = require("ethers")
 const { networks } = require('../hardhat.config');
-const ownAddress = '0x72264E2431bfF059513899d4fF98f880a958CFa9'
-const provider = ethers.providers.getDefaultProvider('rinkeby');
+const ownAddress = '0x90f79bf6eb2c4f870365e785982e1f101e93b906'
+const player2Address = '0x70997970c51812dc3a010c7d01b50e0d17dc79c8'
+const provider = ethers.providers.getDefaultProvider('http://127.0.0.1:8545/');
 
 const main = async() => {
   const ptitTokenFactory = await hre.ethers.getContractFactory("PtitToken");
@@ -19,7 +20,6 @@ const main = async() => {
   console.log("Vault address: ", vaultContract.address);
 
   const gameFactory = await hre.ethers.getContractFactory("TwoPlayersV1");
-  // const gameFactory = await hre.ethers.getContractFactory("NonCompetitiveGameA");
 
   const gameContract = await gameFactory.deploy(vaultContract.address);
 
@@ -27,49 +27,50 @@ const main = async() => {
 
   console.log("Game address: ", gameContract.address);
 
-  const wallet = new ethers.Wallet(networks.ropsten.accounts[0], provider);
-  const parsedAmount = ethers.utils.parseEther("10000000000");
+  const gameFactoryNonCompetitive = await hre.ethers.getContractFactory("NonCompetitiveGameA");
+  
+  const gameContractNonCompetitive = await gameFactoryNonCompetitive.deploy(vaultContract.address);
 
-  const gasEstimated1 = await ptitTokenContract.estimateGas.mint(ownAddress, parsedAmount)
-  await ptitTokenContract.connect(wallet).mint(ownAddress, parsedAmount, {
-    gasLimit: gasEstimated1 * 1.5 
-  })
-  console.log(gasEstimated1);
+  await gameContractNonCompetitive.deployed();
+
+  console.log("Game NonCompetitive address: ", gameContractNonCompetitive.address);
+
+  const wallet = new ethers.Wallet(networks.local.accounts[0], provider);
+  const walletPlayer2 = new ethers.Wallet(networks.local.accounts[1], provider);
+
+  const parsedAmount = ethers.utils.parseEther("100000");
+
+  await ptitTokenContract.connect(wallet).mint(ownAddress, parsedAmount)
   console.log('checkpoint 1');
-  let gasEstimated2 = await ptitTokenContract.estimateGas.approve(vaultContract.address, parsedAmount)
 
-  await ptitTokenContract.connect(wallet).approve(vaultContract.address, parsedAmount, {
-    gasLimit: gasEstimated2
-  })
-  console.log(gasEstimated2);
+  await ptitTokenContract.connect(wallet).mint(player2Address, parsedAmount)
+  console.log('checkpoint 1b');
+
+  await ptitTokenContract.connect(wallet).approve(vaultContract.address, parsedAmount)
   console.log('checkpoint 2');
 
-  let gasEstimated3 = await vaultContract.estimateGas.setMintAmount(parsedAmount)
-  await vaultContract.connect(wallet).setMintAmount(parsedAmount, {
-    gasLimit: gasEstimated3 * 1.5  
-  })
-  console.log(gasEstimated3);
+  await ptitTokenContract.connect(walletPlayer2).approve(vaultContract.address, parsedAmount)
+  console.log('checkpoint 2b');
+
+  await vaultContract.connect(wallet).setMintAmount(parsedAmount)
   console.log('checkpoint 3');
 
-  let gasEstimated4 = await ptitTokenContract.estimateGas.grantPermit(vaultContract.address)
-  await ptitTokenContract.connect(wallet).grantPermit(vaultContract.address, {
-    gasLimit: gasEstimated4 * 1.5  
-  })
-  console.log(gasEstimated4);
+  await vaultContract.connect(wallet).setMintTime('1')
   console.log('checkpoint 4');
 
-  let gasEstimated5 = await vaultContract.estimateGas.grantPermit(gameContract.address)
-  await vaultContract.connect(wallet).grantPermit(gameContract.address, {
-    gasLimit: gasEstimated5 * 1.5  
-  })
-  console.log(gasEstimated5);
+  await ptitTokenContract.connect(wallet).grantPermit(vaultContract.address)
   console.log('checkpoint 5');
 
-  let gasEstimated6 = await gameContract.estimateGas.setVerification(ownAddress)
-  await gameContract.connect(wallet).setVerification(ownAddress, {
-    gasLimit: gasEstimated6 * 1.5  
-  })
-  console.log(gasEstimated6);
+  await vaultContract.connect(wallet).grantPermit(gameContract.address)
+  console.log('checkpoint 6');
+
+  await vaultContract.connect(wallet).grantPermit(gameContractNonCompetitive.address)
+  console.log('checkpoint 7');
+
+  await gameContract.connect(wallet).setVerification('0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266')
+
+  await gameContractNonCompetitive.connect(wallet).setVerification('0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266')
+
   console.log("Done!");
 }
 

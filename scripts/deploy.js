@@ -1,9 +1,9 @@
 const hre = require("hardhat");
 const ethers = require("ethers")
 const { networks } = require('../hardhat.config');
-const ownAddress = '0x90f79bf6eb2c4f870365e785982e1f101e93b906'
+const ownAddress = '0xBe5D8f662074e48aC5a363Ee0c7ADA0dBe97c7b0'
 const player2Address = '0x70997970c51812dc3a010c7d01b50e0d17dc79c8'
-const provider = ethers.providers.getDefaultProvider('http://127.0.0.1:8545/');
+const provider = ethers.providers.getDefaultProvider(networks.goerli.url);
 
 const main = async() => {
   const ptitTokenFactory = await hre.ethers.getContractFactory("PtitToken");
@@ -35,41 +35,42 @@ const main = async() => {
 
   console.log("Game NonCompetitive address: ", gameContractNonCompetitive.address);
 
-  const wallet = new ethers.Wallet(networks.local.accounts[0], provider);
-  const walletPlayer2 = new ethers.Wallet(networks.local.accounts[1], provider);
+  const wallet = new ethers.Wallet(networks.goerli.accounts[0], provider);
+  // const walletPlayer2 = new ethers.Wallet(networks.local.accounts[1], provider);
 
-  const parsedAmount = ethers.utils.parseEther("100000");
+  // const parsedAmount = ethers.utils.parseEther("100000");
 
-  await ptitTokenContract.connect(wallet).mint(ownAddress, parsedAmount)
-  console.log('checkpoint 1');
+  // await ptitTokenContract.connect(wallet).mint(ownAddress, parsedAmount)
+  // console.log('checkpoint 1');
 
-  await ptitTokenContract.connect(wallet).mint(player2Address, parsedAmount)
-  console.log('checkpoint 1b');
+  // await ptitTokenContract.connect(wallet).mint(player2Address, parsedAmount)
+  // console.log('checkpoint 1b');
 
-  await ptitTokenContract.connect(wallet).approve(vaultContract.address, parsedAmount)
-  console.log('checkpoint 2');
+  // await ptitTokenContract.connect(wallet).approve(vaultContract.address, parsedAmount)
+  // console.log('checkpoint 2');
 
-  await ptitTokenContract.connect(walletPlayer2).approve(vaultContract.address, parsedAmount)
-  console.log('checkpoint 2b');
+  // await ptitTokenContract.connect(walletPlayer2).approve(vaultContract.address, parsedAmount)
+  // console.log('checkpoint 2b');
 
-  await vaultContract.connect(wallet).setMintAmount(parsedAmount)
-  console.log('checkpoint 3');
+  // await vaultContract.connect(wallet).setMintAmount(parsedAmount)
+  // console.log('checkpoint 3');
 
   await vaultContract.connect(wallet).setMintTime('1')
   console.log('checkpoint 4');
 
-  await ptitTokenContract.connect(wallet).grantPermit(vaultContract.address)
+  let nonce = await provider.getTransactionCount(ownAddress)
+  await ptitTokenContract.connect(wallet).grantPermit(vaultContract.address, {nonce: nonce + 1})
   console.log('checkpoint 5');
 
-  await vaultContract.connect(wallet).grantPermit(gameContract.address)
+  await vaultContract.connect(wallet).grantPermit(gameContract.address, {nonce: nonce + 2})
   console.log('checkpoint 6');
 
-  await vaultContract.connect(wallet).grantPermit(gameContractNonCompetitive.address)
+  await vaultContract.connect(wallet).grantPermit(gameContractNonCompetitive.address, {nonce: nonce + 3})
   console.log('checkpoint 7');
 
-  await gameContract.connect(wallet).setVerification('0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266')
+  await gameContract.connect(wallet).setVerification('0x6C2B6b1f1B4EA96234b1BD6f84F808Fae63cB3B0', {nonce: nonce + 4})
 
-  await gameContractNonCompetitive.connect(wallet).setVerification('0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266')
+  await gameContractNonCompetitive.connect(wallet).setVerification('0x6C2B6b1f1B4EA96234b1BD6f84F808Fae63cB3B0', {nonce: nonce + 5})
 
   console.log("Done!");
 }
